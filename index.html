@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スマホカメラ撮影＆画像縮小</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        .controls { margin-bottom: 20px; }
+        img, canvas { max-width: 100%; height: auto; margin-top: 10px; border: 1px solid #ccc; }
+        label { display: block; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <h2>📸 カメラ撮影 ＆ 指定率縮小</h2>
+
+    <div class="controls">
+        <!-- 縮小率の指定（例: 0.5 = 50%） -->
+        <label>
+            縮小率: 
+            <select id="scaleRate">
+                <option value="1.0">100% (そのまま)</option>
+                <option value="0.75">75%</option>
+                <option value="0.5" selected>50%</option>
+                <option value="0.25">25%</option>
+                <option value="0.1">10%</option>
+            </select>
+        </label>
+
+        <!-- スマホでカメラを直接起動するインプット -->
+        <input type="file" id="cameraInput" accept="image/*" capture="environment">
+    </div>
+
+    <div>
+        <h3>結果プレビュー</h3>
+        <div id="info"></div>
+        <img id="outputImage" alt="処理後の画像がここに表示されます" />
+    </div>
+
+    <script>
+        const cameraInput = document.getElementById('cameraInput');
+        const scaleRateSelect = document.getElementById('scaleRate');
+        const outputImage = document.getElementById('outputImage');
+        const info = document.getElementById('info');
+
+        cameraInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 選択された縮小率を取得
+            const scaleRate = parseFloat(scaleRateSelect.value);
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    // 1. 元のサイズから計算して縮小後のサイズを決定
+                    const dstWidth = img.width * scaleRate;
+                    const dstHeight = img.height * scaleRate;
+
+                    // 2. Canvasを作成してサイズを設定
+                    const canvas = document.createElement('canvas');
+                    canvas.width = dstWidth;
+                    canvas.height = dstHeight;
+
+                    // 3. Canvasに画像を縮小して描画
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, dstWidth, dstHeight);
+
+                    // 4. CanvasからBase64データ（またはBlob）に変換して、imgタグに表示
+                    // ※第2引数で画質(0.0〜1.0)を指定してさらに軽量化も可能
+                    const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.85); 
+                    outputImage.src = resizedDataUrl;
+
+                    // 情報表示
+                    info.innerHTML = `
+                        元サイズ: ${img.width} x ${img.height} px<br>
+                        縮小後 (${scaleRate * 100}%): ${Math.round(dstWidth)} x ${Math.round(dstHeight)} px
+                    `;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
