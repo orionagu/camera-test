@@ -5,10 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>スマホカメラ撮影＆画像縮小</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; }
-        .controls { margin-bottom: 20px; }
-        img, canvas { max-width: 100%; height: auto; margin-top: 10px; border: 1px solid #ccc; }
-        label { display: block; margin: 10px 0; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f5f5f5; }
+        .controls { margin-bottom: 20px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        img { max-width: 100%; height: auto; margin-top: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        label { display: block; margin: 15px 0; font-weight: bold; }
+        select { padding: 8px; font-size: 16px; border-radius: 4px; }
+        
+        .camera-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .camera-btn:active { background-color: #0056b3; }
+        #cameraInput { display: none; }
     </style>
 </head>
 <body>
@@ -16,7 +32,6 @@
     <h2>📸 カメラ撮影 ＆ 指定率縮小</h2>
 
     <div class="controls">
-        <!-- 縮小率の指定（例: 0.5 = 50%） -->
         <label>
             縮小率: 
             <select id="scaleRate">
@@ -28,14 +43,19 @@
             </select>
         </label>
 
-        <!-- スマホでカメラを直接起動するインプット -->
-        <input type="file" id="cameraInput" accept="image/*">
+        <label class="camera-btn" for="cameraInput">
+            📸 カメラを起動または写真を選択
+        </label>
+        
+        <!-- 【Android 14以降のバグ対策】 -->
+        <!-- acceptに ";capture=camera" を結合することで、Androidでもカメラの選択肢が出現します -->
+        <input type="file" id="cameraInput" accept="image/*;capture=camera">
     </div>
 
     <div>
         <h3>結果プレビュー</h3>
-        <div id="info"></div>
-        <img id="outputImage" alt="処理後の画像がここに表示されます" />
+        <div id="info" style="margin-bottom: 10px; color: #555;"></div>
+        <img id="outputImage" alt="ココに縮小後の画像が表示されます" />
     </div>
 
     <script>
@@ -45,38 +65,32 @@
         const info = document.getElementById('info');
 
         cameraInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
 
-            // 選択された縮小率を取得
+            const file = files[0];
             const scaleRate = parseFloat(scaleRateSelect.value);
 
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = new Image();
                 img.onload = () => {
-                    // 1. 元のサイズから計算して縮小後のサイズを決定
                     const dstWidth = img.width * scaleRate;
                     const dstHeight = img.height * scaleRate;
 
-                    // 2. Canvasを作成してサイズを設定
                     const canvas = document.createElement('canvas');
                     canvas.width = dstWidth;
                     canvas.height = dstHeight;
 
-                    // 3. Canvasに画像を縮小して描画
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, dstWidth, dstHeight);
 
-                    // 4. CanvasからBase64データ（またはBlob）に変換して、imgタグに表示
-                    // ※第2引数で画質(0.0〜1.0)を指定してさらに軽量化も可能
                     const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.85); 
                     outputImage.src = resizedDataUrl;
 
-                    // 情報表示
                     info.innerHTML = `
-                        元サイズ: ${img.width} x ${img.height} px<br>
-                        縮小後 (${scaleRate * 100}%): ${Math.round(dstWidth)} x ${Math.round(dstHeight)} px
+                        <strong>元サイズ:</strong> ${img.width} x ${img.height} px<br>
+                        <strong>縮小後 (${scaleRate * 100}%):</strong> ${Math.round(dstWidth)} x ${Math.round(dstHeight)} px
                     `;
                 };
                 img.src = event.target.result;
